@@ -71,7 +71,7 @@ Switch between Chinese and English on the title screen or in Config.
 - `js/menu.js` covers the field menu, equipment, status, shops, spell shops and the tavern.
 - `js/main.js` runs the main loop, the title, choosing your hero, transitions and the ending.
 - `js/gfx.js`, `js/sprites.js`, `js/enemies.js` and `js/tiles.js` draw everything.
-- `js/sheet.js` and `assets/monsters.png` hold the monster sprites by other artists (see below); `js/pixmon.js` holds the hand-drawn bosses and the rest.
+- `js/sheet.js` and `assets/monsters.png` hold every monster sprite, by other artists (see CREDITS.md); they are drawn small and fine with your screen's real pixels. `js/pixmon.js` keeps the older hand-drawn monsters as a fallback.
 - `js/audio.js` is the synthesizer and soundtrack.
 - `js/i18n.js` switches the language.
 

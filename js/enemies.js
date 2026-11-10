@@ -392,6 +392,7 @@ function recolor(src, hue = 0, sat = 1) {
     d[i] = Math.round(f(h / 360 + 1 / 3) * 255); d[i + 1] = Math.round(f(h / 360) * 255); d[i + 2] = Math.round(f(h / 360 - 1 / 3) * 255);
   }
   c.x.putImageData(id, 0, 0);
+  c.fs = src.fs;
   return c;
 }
 export function enemyArt(key, hue = 0, sat = 1) {
@@ -410,7 +411,7 @@ export function bossArt(key, hue = 0, sat = 1) {
   const k = 'boss:' + key + '|' + hue + '|' + sat;
   if (!cache.has(k)) {
     const a = enemyArt(key, hue, sat);
-    if (!hasPix(key) && !hasSheet(key)) { cache.set(k, a); return a; }
+    if (!hasPix(key) || hasSheet(key)) { cache.set(k, a); return a; }
     const c = canvas(a.width * 2, a.height * 2); c.x.imageSmoothingEnabled = false; c.x.drawImage(a, 0, 0, c.width, c.height);
     cache.set(k, c);
   }

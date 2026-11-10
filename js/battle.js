@@ -4,8 +4,8 @@
 // learned on the spot. Falling in battle costs LP; with none left a hero is gone for good.
 import { ctx, W, H, canvas, text, textW, windowBox, HAND, HAND_D, tint, bar, ramp, hash, bayer, snes, hex, rgb } from './gfx.js';
 import { sprite } from './sprites.js';
+import { fine } from './gfx.js';
 import { enemyArt, bossArt } from './enemies.js';
-import { hasSheet } from './sheet.js';
 import { ENEMIES, TECHS, SPELLS, ARTS, ITEMS, HEROES, kindName } from './data.js';
 import { L, isEn } from './i18n.js';
 import { S, stats, weaponsOf, grow, addItem, count, afterBattle } from './party.js';
@@ -109,10 +109,10 @@ function foeFighter(f) { const d = ENEMIES[f.id]; return { atk: f.atk, dfn: f.de
 function heroFighter(h, w) { const s = stats(h); const ww = w || weaponsOf(h)[0]; return { atk: weaponAtk(ww, s, h.skills[ww.kind] || 0) * (h.buffs.str ? 1.2 : 1), dfn: s.dfn, int: s.wil, agi: s.agi * (h.buffs.agi ? 1.4 : 1), buffs: h.buffs, defending: h.defending }; }
 const used = (h) => (B.used[h.id] = B.used[h.id] || { kinds: new Set(), schools: new Set(), arts: 0, spells: 0, hit: false });
 function layoutFoes() {
-  const list = B.foes, sum = list.reduce((s, f) => s + f.art.width, 0), gap = list.length > 1 ? Math.min(8, Math.floor((W - 4 - sum) / (list.length - 1))) : 0;
-  const total = list.reduce((s, f) => s + f.art.width, 0) + gap * (list.length - 1);
+  const list = B.foes, sum = list.reduce((s, f) => s + f.aw, 0), gap = list.length > 1 ? Math.min(8, Math.floor((W - 4 - sum) / (list.length - 1))) : 0;
+  const total = list.reduce((s, f) => s + f.aw, 0) + gap * (list.length - 1);
   let x = Math.round((W - total) / 2);
-  for (const f of list) { f.x = x + f.art.width / 2; f.base = ENEMIES[f.id].boss ? 132 : 122; x += f.art.width + gap; }
+  for (const f of list) { f.x = x + f.aw / 2; f.base = ENEMIES[f.id].boss ? 132 : 122; x += f.aw + gap; }
 }
 
 // ---------- start / end ----------
@@ -122,14 +122,14 @@ export function startBattle(troop, { bg = 'field', boss = false, music, canFlee 
     const foes = troop.map((id, i) => {
       const d = ENEMIES[id];
       const k = d.boss ? scale : 1;
-      return { id, n: i, name: d.name + (troop.filter((t) => t === id).length > 1 ? 'ABCD'[troop.slice(0, i).filter((t) => t === id).length] : ''), hp: Math.round(d.hp * k), maxhp: Math.round(d.hp * k), atk: Math.round(d.atk * Math.sqrt(k)), def: d.def, int: Math.round(d.int * Math.sqrt(k)), art: d.boss ? bossArt(d.art, d.hue, d.sat) : enemyArt(d.art, d.hue, d.sat), status: {}, buffs: {}, flash: 0, shake: 0, die: 0, bob: Math.random() * 6 };
+      return { get aw() { return artW(this.art); }, get ah() { return artH(this.art); }, id, n: i, name: d.name + (troop.filter((t) => t === id).length > 1 ? 'ABCD'[troop.slice(0, i).filter((t) => t === id).length] : ''), hp: Math.round(d.hp * k), maxhp: Math.round(d.hp * k), atk: Math.round(d.atk * Math.sqrt(k)), def: d.def, int: Math.round(d.int * Math.sqrt(k)), art: d.boss ? bossArt(d.art, d.hue, d.sat) : enemyArt(d.art, d.hue, d.sat), status: {}, buffs: {}, flash: 0, shake: 0, die: 0, bob: Math.random() * 6 };
     });
     B = { troop, foes, bg, boss, canFlee: canFlee && !boss, waits: [], pops: [], parts: [], msg: '', round: 0, active: null, shake: 0, flash: 0, flashCol: '#fff', fade: 30, resolve, heroFx: {}, bolt: null, done: false, used: {}, bulbs: [], tier: Math.max(...troop.map((id) => ENEMIES[id].tier + (ENEMIES[id].boss ? 1 : 0))) };
     for (const h of S.members) { h.buffs = {}; h.defending = false; h.status = { ...h.status }; delete h.status.sleep; delete h.status.stun; }
     // hand-drawn monsters are shown at double size whenever the whole group still fits on screen
     const big = foes.map((f) => (ENEMIES[f.id].boss ? f.art : bossArt(ENEMIES[f.id].art, ENEMIES[f.id].hue, ENEMIES[f.id].sat)));
     // the artists' sprites are already drawn at full size; only the hand-drawn grids are doubled
-    if (!foes.some((f) => hasSheet(ENEMIES[f.id].art) && !ENEMIES[f.id].boss) && big.reduce((s, a) => s + a.width, 0) <= W + 30 && Math.max(...big.map((a) => a.height)) <= 110) foes.forEach((f, i) => { f.art = big[i]; });
+    if (!foes.some((f) => f.art.fs) && big.reduce((s, a) => s + a.width, 0) <= W + 30 && Math.max(...big.map((a) => a.height)) <= 110) foes.forEach((f, i) => { f.art = big[i]; });
     layoutFoes();
     playMusic(music || (boss ? 'boss' : 'battle'), { restart: true });
     run();
@@ -179,7 +179,7 @@ async function roundEnd() {
     for (const k of Object.keys(h.buffs)) if (--h.buffs[k] <= 0) delete h.buffs[k];
   }
   for (const f of foesAlive()) {
-    if (f.status.poison) { const d = Math.max(1, Math.floor(f.maxhp / 16)); f.hp = Math.max(1, f.hp - d); popup(f.x, f.base - f.art.height / 2, d, '#c080f8'); }
+    if (f.status.poison) { const d = Math.max(1, Math.floor(f.maxhp / 16)); f.hp = Math.max(1, f.hp - d); popup(f.x, f.base - f.ah / 2, d, '#c080f8'); }
     if (f.status.sleep && --f.status.sleep <= 0) delete f.status.sleep;
     if (f.status.stun && --f.status.stun <= 0) delete f.status.stun;
     for (const k of Object.keys(f.buffs)) if (--f.buffs[k] <= 0) delete f.buffs[k];
@@ -317,7 +317,7 @@ function pickFoe() {
         if (input.pressed('a')) { sfx('ok'); done(list[i]); }
         if (input.pressed('b')) { sfx('cancel'); done(null); }
       },
-      draw() { const f = list[i]; if (!f) return; ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(f.base - f.art.height - 10 + ((B.t >> 3) % 2))); windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); },
+      draw() { const f = list[i]; if (!f) return; ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(f.base - f.ah - 10 + ((B.t >> 3) % 2))); windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); },
     };
     const done = (v) => { UI_pop(w); res(v); };
     UI_push(w);
@@ -351,7 +351,7 @@ async function stepForward(h) { B.heroFx[h.id] = { dy: 0 }; for (let k = 0; k < 
 async function stepBack(h) { for (let k = 0; k < 6; k++) { if (B.heroFx[h.id]) B.heroFx[h.id].dy += 2; await frames(1); } delete B.heroFx[h.id]; }
 function hurtFoe(f, d, col = '#f8f8f8') {
   f.hp = Math.max(0, f.hp - d); f.flash = 8; f.shake = 10;
-  popup(f.x, f.base - f.art.height / 2, d, col);
+  popup(f.x, f.base - f.ah / 2, d, col);
   if (f.status.sleep && Math.random() < 0.5) delete f.status.sleep;
   if (f.hp <= 0) killFoe(f);
 }
@@ -388,9 +388,9 @@ async function doArt(h, id, w, target, free) {
     for (const t of ts) {
       if (t.hp <= 0) continue;
       const r = physical(me, foeFighter(t), a.k, { crit: a.crit || 0.06, pierce: a.pierce });
-      if (r.miss) { popup(t.x, t.base - t.art.height / 2, 'MISS', '#a0a8c0'); continue; }
+      if (r.miss) { popup(t.x, t.base - t.ah / 2, 'MISS', '#a0a8c0'); continue; }
       hurtFoe(t, r.dmg, r.crit ? '#f8e040' : '#f8f8f8');
-      if (a.stun && !ENEMIES[t.id].boss && Math.random() < a.stun) { t.status.stun = 2; popup(t.x, t.base - t.art.height, L('定身', 'STUN'), '#f8e070'); }
+      if (a.stun && !ENEMIES[t.id].boss && Math.random() < a.stun) { t.status.stun = 2; popup(t.x, t.base - t.ah, L('定身', 'STUN'), '#f8e070'); }
       if (a.poison && !ENEMIES[t.id].boss && Math.random() < a.poison) { t.status.poison = 1; }
     }
   }
@@ -421,7 +421,7 @@ async function heroAct(h, c) {
     sfx('slash'); fxArt(w.kind === 'bow' ? 'arrow' : w.kind === 'spear' ? 'thrust' : w.kind === 'fist' || w.kind === 'staff' ? 'smash' : 'slash', t);
     await frames(10);
     const r = physical(heroFighter(h, w), foeFighter(t));
-    if (r.miss) { sfx('miss'); popup(t.x, t.base - t.art.height / 2, 'MISS', '#a0a8c0'); }
+    if (r.miss) { sfx('miss'); popup(t.x, t.base - t.ah / 2, 'MISS', '#a0a8c0'); }
     else { sfx(r.crit ? 'crit' : 'hit'); if (r.crit) { B.flash = 4; msg(L('會心一擊！', 'Critical hit!')); } hurtFoe(t, r.dmg); }
     await frames(22);
     await stepBack(h);
@@ -467,7 +467,7 @@ async function castSpell(h, sp, target) {
   if (sp.type === 'dmg' || sp.type === 'drain') {
     const ts = target === 'allFoes' ? foesAlive() : [pickAliveFoe(target)].filter(Boolean);
     sfx(sp.fx === 'holy' ? 'holy' : sp.fx === 'rock' || sp.fx === 'quake' ? 'quake' : sp.fx === 'wind' ? 'bolt' : sp.fx === 'drain' ? 'drain' : sp.fx);
-    for (const t of ts) fxSpell(sp.fx, t.x, t.base - t.art.height / 2, t);
+    for (const t of ts) fxSpell(sp.fx, t.x, t.base - t.ah / 2, t);
     if (sp.fx === 'quake') B.shake = 20;
     await frames(30);
     for (const t of ts) {
@@ -498,17 +498,17 @@ async function castSpell(h, sp, target) {
     await frames(20);
   } else if (sp.type === 'sleep') {
     sfx('sleep');
-    for (const f of foesAlive()) fxSpell('sleep', f.x, f.base - f.art.height / 2);
+    for (const f of foesAlive()) fxSpell('sleep', f.x, f.base - f.ah / 2);
     await frames(30);
-    for (const f of foesAlive()) { const ok = !ENEMIES[f.id].boss && Math.random() < 0.65; if (ok) { f.status.sleep = 2 + Math.floor(Math.random() * 2); popup(f.x, f.base - f.art.height / 2, 'ZZZ', '#c0c0ff'); } else popup(f.x, f.base - f.art.height / 2, 'MISS', '#a0a8c0'); }
+    for (const f of foesAlive()) { const ok = !ENEMIES[f.id].boss && Math.random() < 0.65; if (ok) { f.status.sleep = 2 + Math.floor(Math.random() * 2); popup(f.x, f.base - f.ah / 2, 'ZZZ', '#c0c0ff'); } else popup(f.x, f.base - f.ah / 2, 'MISS', '#a0a8c0'); }
     await frames(24);
   }
   void me;
 }
 async function foeAct(f) {
   const d = ENEMIES[f.id];
-  if (f.status.sleep) { popup(f.x, f.base - f.art.height, 'ZZZ', '#c0c0ff'); await frames(20); return; }
-  if (f.status.stun) { popup(f.x, f.base - f.art.height, L('定身', 'STUN'), '#f8e070'); await frames(16); return; }
+  if (f.status.sleep) { popup(f.x, f.base - f.ah, 'ZZZ', '#c0c0ff'); await frames(20); return; }
+  if (f.status.stun) { popup(f.x, f.base - f.ah, L('定身', 'STUN'), '#f8e070'); await frames(16); return; }
   const targets = heroesAlive();
   if (!targets.length) return;
   const act = foeAction(f, B.round);
@@ -554,12 +554,12 @@ async function foeAct(f) {
   } else if (tech.kind === 'drain') {
     const t = pick(); sfx('drain');
     const p = heroPos(t);
-    for (let k = 0; k < 14; k++) B.parts.push({ x: p.x + (Math.random() - 0.5) * 12, y: p.y - 12, tx: f.x, ty: f.base - f.art.height / 2, life: 40, col: '#f84060', size: 2, type: 'home', d: k * 2 });
+    for (let k = 0; k < 14; k++) B.parts.push({ x: p.x + (Math.random() - 0.5) * 12, y: p.y - 12, tx: f.x, ty: f.base - f.ah / 2, life: 40, col: '#f84060', size: 2, type: 'home', d: k * 2 });
     await frames(30);
     const r = magic(10 + f.int * 0.8, heroFighter(t), 'dark');
     hurtHero(t, r.dmg);
     f.hp = Math.min(f.maxhp, f.hp + r.dmg);
-    popup(f.x, f.base - f.art.height / 2, r.dmg, '#78f878');
+    popup(f.x, f.base - f.ah / 2, r.dmg, '#78f878');
     await frames(24);
   } else if (tech.kind === 'buff') {
     sfx('buff'); f.buffs[tech.stat] = 3;
@@ -568,7 +568,7 @@ async function foeAct(f) {
   void d;
 }
 function fxArt(kind, t) {
-  const x = t.x, y = t.base - t.art.height / 2;
+  const x = t.x, y = t.base - t.ah / 2;
   if (kind === 'slash') fxSlash(x, y);
   else if (kind === 'moon') { fxSlash(x, y, '#c0c8ff'); fxSlash(x + 6, y - 6, '#ffffff'); }
   else if (kind === 'thrust' || kind === 'arrow') { for (let k = 0; k < 8; k++) B.parts.push({ x: x - 30 + k * 4, y: y + (kind === 'arrow' ? -4 : 0), vx: 3, vy: 0, life: 8, col: kind === 'arrow' ? '#f0e0a0' : '#ffffff', size: 2, d: k }); }
@@ -625,6 +625,8 @@ export function updateBattle() {
   if (B.fade > 0) B.fade--;
 }
 const dissolve = new Map();
+// a sheet sprite is drawn at its own scale, snapped to whole screen pixels
+const artW = (a) => a.width * (a.fs ? fine(a.fs) : 1), artH = (a) => a.height * (a.fs ? fine(a.fs) : 1);
 function dissolved(f) {
   // a monster breaking up into pixels as it dies
   const k = f.die, a = f.art;
@@ -647,11 +649,11 @@ export function drawBattle() {
   for (const f of B.foes) {
     if (f.hp <= 0 && f.die >= 38) continue;
     const bob = ENEMIES[f.id].boss ? Math.sin((B.t + f.bob * 10) / 24) * 2 : 0;
-    let x = Math.round(f.x - f.art.width / 2 + sx + (f.shake ? ((f.shake % 4) < 2 ? 2 : -2) : 0));
-    const y = Math.round(f.base - f.art.height + bob + (f.lunge ? Math.sin((10 - f.lunge) / 10 * Math.PI) * 6 : 0));
-    if (f.hp <= 0) { ctx.drawImage(dissolved(f), x, y); continue; }
-    if (f.status.sleep) { if ((B.t >> 5) % 2) text('Z', x + f.art.width - 4, y - 4 - ((B.t >> 3) % 4), '#c0c0ff'); }
-    ctx.drawImage(f.flash && f.flash % 4 < 2 ? tint(f.art, '#ffffff', 0.85) : f.art, x, y);
+    let x = Math.round(f.x - f.aw / 2 + sx + (f.shake ? ((f.shake % 4) < 2 ? 2 : -2) : 0));
+    const y = Math.round(f.base - f.ah + bob + (f.lunge ? Math.sin((10 - f.lunge) / 10 * Math.PI) * 6 : 0));
+    if (f.hp <= 0) { ctx.drawImage(dissolved(f), x, y, f.aw, f.ah); continue; }
+    if (f.status.sleep) { if ((B.t >> 5) % 2) text('Z', x + f.aw - 4, y - 4 - ((B.t >> 3) % 4), '#c0c0ff'); }
+    ctx.drawImage(f.flash && f.flash % 4 < 2 ? tint(f.art, '#ffffff', 0.85) : f.art, x, y, f.aw, f.ah);
   }
   // lightning
   if (B.bolt) {
