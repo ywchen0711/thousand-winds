@@ -376,13 +376,13 @@ function drawEnt(e, cx, cy) {
     case 'spring': ctx.drawImage(springArt(), x, y); if (F.frame % 30 < 15) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 5 + (F.frame % 5), y + 6, 1, 1); } break;
     case 'icon': { const a = iconArt(e.icon); ctx.drawImage(a, x + 8 - a.width / 2, y + 16 - a.height); break; }
     case 'enemy': {
-      const a = miniArt(e.art, e.hue || 0), b = Math.abs(Math.sin((F.frame + e.n * 13) / 10)) * 2;
+      const a = miniArt(e.art, e.hue || 0, e.sat || 1), b = Math.abs(Math.sin((F.frame + e.n * 13) / 10)) * 2;
       if (e.stun && F.frame % 4 < 2) break;
       ctx.drawImage(shadow, x + 1, y + 12);
-      ctx.drawImage(e.dir === 'r' ? flipped(e.art + (e.hue || 0), a) : a, x + 8 - Math.floor(a.width / 2), y + 14 - a.height - Math.round(b));
+      ctx.drawImage(e.dir === 'r' ? flipped(e.art + (e.hue || 0) + '|' + (e.sat || 1), a) : a, x + 8 - Math.floor(a.width / 2), y + 14 - a.height - Math.round(b));
       break;
     }
-    case 'boss': { const a = enemyArt(e.art, e.hue || 0), s = e.scale || 0.5, w = a.width * s, h = a.height * s; ctx.drawImage(a, Math.round(x + 8 - w / 2), Math.round(y + 16 - h + Math.sin(F.frame / 20) * 2), w, h); break; }
+    case 'boss': { const a = enemyArt(e.art, e.hue || 0, e.sat || 1), s = e.scale || 0.5, w = a.width * s, h = a.height * s; ctx.drawImage(a, Math.round(x + 8 - w / 2), Math.round(y + 16 - h + Math.sin(F.frame / 20) * 2), w, h); break; }
     case 'sprite': if (e.draw) e.draw(ctx, x, y, F.frame); break;
     case 'deco': { const a = iconArt(e.icon); ctx.drawImage(a, x + 8 - Math.floor(a.width / 2), y + 16 - a.height + (e.bob ? Math.round(Math.sin(F.frame / 30 + e.x) * 1) : 0)); break; }
     case 'sign': if (e.sprite === 'stone') { ctx.drawImage(stoneArt(), x, y - 4); if (F.frame % 50 < 25) { ctx.fillStyle = '#c0fff8'; ctx.fillRect(x + 6 + (F.frame % 3), y - 2, 1, 1); } } break;

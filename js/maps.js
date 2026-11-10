@@ -179,9 +179,9 @@ const THEMES = {
   sanctum: { K: 'twall', '.': 'tfloor', m: 'tpillar', '*': 'tpillar', music: 'tower', bg: 'sanctum', tint: 'rgba(60,50,90,0.2)' },
 };
 export const DUNGEONS = {
-  aqueduct:   { name: '舊水道', theme: 'cave', seed: 11, rooms: 6, tier: 1, boss: { id: 'ooze', art: 'jelly', hue: 220, scale: 1, talk: 'boss_ooze', flag: 'b_ooze' }, chests: [{ id: 'aq1', item: 'herb', n: 2 }, { id: 'aq2', gold: 120 }, { id: 'aq3', item: 'broadsword' }] },
+  aqueduct:   { name: '舊水道', theme: 'cave', seed: 11, rooms: 6, tier: 1, boss: { id: 'ooze', art: 'jelly', sat: 0.15, scale: 1, talk: 'boss_ooze', flag: 'b_ooze' }, chests: [{ id: 'aq1', item: 'herb', n: 2 }, { id: 'aq2', gold: 120 }, { id: 'aq3', item: 'broadsword' }] },
   seacave:    { name: '海蝕洞', theme: 'cave', seed: 23, rooms: 6, tier: 1, boss: { id: 'smuggler', art: 'brigand', scale: 0.8, talk: 'boss_smuggler', flag: 'b_smuggler' }, chests: [{ id: 'sc1', item: 'dirk' }, { id: 'sc2', gold: 150 }, { id: 'sc3', item: 'smoke', n: 2 }] },
-  gorge:      { name: '風鳴峽谷', theme: 'gorge', seed: 37, rooms: 7, tier: 2, boss: { id: 'wolfking', art: 'wolf', hue: 300, scale: 0.7, talk: 'boss_wolfking', flag: 'b_wolfking' }, chests: [{ id: 'go1', item: 'longbow' }, { id: 'go2', item: 'tonic', n: 2 }, { id: 'go3', gold: 260 }] },
+  gorge:      { name: '風鳴峽谷', theme: 'gorge', seed: 37, rooms: 7, tier: 2, boss: { id: 'wolfking', art: 'wolfr', sat: 1.2, scale: 0.7, talk: 'boss_wolfking', flag: 'b_wolfking' }, chests: [{ id: 'go1', item: 'longbow' }, { id: 'go2', item: 'tonic', n: 2 }, { id: 'go3', gold: 260 }] },
   mines:      { name: '鐵爪廢礦', theme: 'mine', seed: 41, rooms: 8, tier: 3, boss: { id: 'morgan', art: 'knight', scale: 0.7, talk: 'boss_morgan', flag: 'b_morgan' }, chests: [{ id: 'mi1', item: 'battleaxe' }, { id: 'mi2', item: 'powerbelt' }, { id: 'mi3', item: 'hiherb', n: 2 }] },
   library:    { name: '沉沒書庫', theme: 'library', seed: 53, rooms: 8, tier: 3, need: 'libkey', boss: { id: 'ide', art: 'witch', scale: 0.7, talk: 'boss_ide', flag: 'b_ide' }, chests: [{ id: 'li1', item: 'sagestaff' }, { id: 'li2', item: 'ether', n: 3 }, { id: 'li3', item: 'sagering' }] },
   ghostship:  { name: '幽靈船', theme: 'ship', seed: 67, rooms: 7, tier: 4, boss: { id: 'captain', art: 'bones', hue: 180, scale: 1, talk: 'boss_captain', flag: 'b_captain' }, chests: [{ id: 'gh1', item: 'moonfang' }, { id: 'gh2', gold: 600 }, { id: 'gh3', item: 'lifewind' }] },
@@ -235,14 +235,14 @@ function buildDungeon(id) {
     for (let k = 0; k < n; k++) {
       const s = spot(r); if (!s) continue;
       const troop = groups[Math.floor(R() * groups.length)][1], lead = ENEMIES[troop[0]];
-      m.ents.push({ type: 'enemy', n: i * 2 + k, troop, art: lead.art, hue: lead.hue || 0, x: s[0], y: s[1], hx: s[0], hy: s[1], range: 5, sight: 5 });
+      m.ents.push({ type: 'enemy', n: i * 2 + k, troop, art: lead.art, hue: lead.hue || 0, sat: lead.sat || 1, x: s[0], y: s[1], hx: s[0], hy: s[1], range: 5, sight: 5 });
     }
   });
   D.chests.forEach((c, i) => { const r = mid[(i * 3 + 1) % mid.length] || entrance; const s = spot(r); if (s) m.ents.push({ type: 'chest', ...c, x: s[0], y: s[1] }); });
   { const s = spot(entrance); if (s) m.ents.push({ type: 'save', x: s[0], y: s[1] }); }
   { const r = chain[chain.length - 2]; const s = r && spot(r); if (s) m.ents.push({ type: 'save', x: s[0], y: s[1] }); }
   const boss = rooms[0], bx = cx(boss), by = boss.y + 2;
-  m.ents.push({ type: 'boss', id: D.boss.id, art: D.boss.art, hue: D.boss.hue || 0, scale: D.boss.scale, talk: D.boss.talk, x: bx, y: by, cond: (f) => !f[D.boss.flag] });
+  m.ents.push({ type: 'boss', id: D.boss.id, art: D.boss.art, hue: D.boss.hue || 0, sat: D.boss.sat || 1, scale: D.boss.scale, talk: D.boss.talk, x: bx, y: by, cond: (f) => !f[D.boss.flag] });
   for (let x = boss.x; x < boss.x + boss.w; x++) m.ents.push({ type: 'trigger', run: D.boss.talk, x, y: boss.y + boss.h - 2, cond: (f) => !f[D.boss.flag] });
   m.entry = [ex, Hd - 2, 'u'];
   m.dark = th.dark; m.tint = th.tint; m.bg = th.bg;

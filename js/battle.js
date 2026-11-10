@@ -5,6 +5,7 @@
 import { ctx, W, H, canvas, text, textW, windowBox, HAND, HAND_D, tint, bar, ramp, hash, bayer, snes, hex, rgb } from './gfx.js';
 import { sprite } from './sprites.js';
 import { enemyArt, bossArt } from './enemies.js';
+import { hasSheet } from './sheet.js';
 import { ENEMIES, TECHS, SPELLS, ARTS, ITEMS, HEROES, kindName } from './data.js';
 import { L, isEn } from './i18n.js';
 import { S, stats, weaponsOf, grow, addItem, count, afterBattle } from './party.js';
@@ -127,7 +128,8 @@ export function startBattle(troop, { bg = 'field', boss = false, music, canFlee 
     for (const h of S.members) { h.buffs = {}; h.defending = false; h.status = { ...h.status }; delete h.status.sleep; delete h.status.stun; }
     // hand-drawn monsters are shown at double size whenever the whole group still fits on screen
     const big = foes.map((f) => (ENEMIES[f.id].boss ? f.art : bossArt(ENEMIES[f.id].art, ENEMIES[f.id].hue, ENEMIES[f.id].sat)));
-    if (big.reduce((s, a) => s + a.width, 0) <= W + 30 && Math.max(...big.map((a) => a.height)) <= 110) foes.forEach((f, i) => { f.art = big[i]; });
+    // the artists' sprites are already drawn at full size; only the hand-drawn grids are doubled
+    if (!foes.some((f) => hasSheet(ENEMIES[f.id].art) && !ENEMIES[f.id].boss) && big.reduce((s, a) => s + a.width, 0) <= W + 30 && Math.max(...big.map((a) => a.height)) <= 110) foes.forEach((f, i) => { f.art = big[i]; });
     layoutFoes();
     playMusic(music || (boss ? 'boss' : 'battle'), { restart: true });
     run();

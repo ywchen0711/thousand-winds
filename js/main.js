@@ -451,7 +451,7 @@ const CREDITS_ZH = [
   ['千風群英譚', 'big'], [''], ['SAGA OF A THOUSAND WINDS'], [''], [''],
   ['— 群英 —', 'y'], ['利恩　瓦爾蒙的見習騎士'], ['賽菈　草海的獵人'], ['古斯塔　鐵爪堡的傭兵'], ['米可　霧港的小偷'], ['妃雅　星塔學院的見習魔導士'], ['卡隆　鹽岬港的老船長'], ['巴斯　露露　塔林'], [''],
   ['— 止息的使徒 —', 'y'], ['灰燼騎士 摩根'], ['靜默女巫 伊黛'], ['沙之王 拉赫'], ['冰后 雪蘿'], [''], ['止息之神 涅爾'], [''], [''],
-  ['故事、畫面、音樂'], ['全部以程式碼繪製與合成'], [''], ['字型：俐方體11號 (Cubic 11)'], [''], [''],
+  ['故事、畫面、音樂'], ['全部以程式碼繪製與合成'], [''], ['怪物圖像 (CC-BY 3.0)'], ['Charles Gabriel (Antifarea)'], ['Stephen "Redshrike" Challener'], ['OpenGameArt.org'], [''], ['字型：俐方體11號 (Cubic 11)'], [''], [''],
   ['風會一直吹下去。'], ['帶著季節，帶著時間，'], ['也帶著你走過的每一段路。'], [''], [''],
   ['感謝你的遊玩！', 'y'], [''], [''], ['—— 完 ——', 'big'],
 ];
@@ -459,7 +459,7 @@ const CREDITS_EN = [
   ['SAGA OF A', 'big'], [''], ['THOUSAND WINDS', 'big'], [''], ['千風群英譚'], [''], [''],
   ['- THE HEROES -', 'y'], ['Rion - squire of Valmont'], ['Sela - huntress of the Grass Sea'], ['Gusta - mercenary of Ironclaw'], ['Mico - thief of Mistport'], ['Fia - apprentice of the Academy'], ['Karon - old captain of Saltreach'], ['Bass   Lulu   Tarin'], [''],
   ['- THE APOSTLES OF STILLNESS -', 'y'], ['Morgan the Ash Knight'], ['Ide the Silent Witch'], ['Rah the Sand King'], ['Sirol the Frost Queen'], [''], ['Nul, God of Stillness'], [''], [''],
-  ['Story, art and music'], ['all made in code'], [''], ['Font: Cubic 11'], [''], [''],
+  ['Story, art and music'], ['all made in code'], [''], ['Monster sprites (CC-BY 3.0)'], ['Charles Gabriel (Antifarea)'], ['Stephen "Redshrike" Challener'], ['hosted by OpenGameArt.org'], [''], ['Font: Cubic 11'], [''], [''],
   ['The wind will keep on blowing,'], ['carrying the seasons and the years,'], ['and every road you walked.'], [''], [''],
   ['THANK YOU FOR PLAYING!', 'y'], [''], [''], ['THE END', 'big'],
 ];

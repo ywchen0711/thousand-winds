@@ -71,7 +71,8 @@ Switch between Chinese and English on the title screen or in Config.
 - `js/menu.js` covers the field menu, equipment, status, shops, spell shops and the tavern.
 - `js/main.js` runs the main loop, the title, choosing your hero, transitions and the ending.
 - `js/gfx.js`, `js/sprites.js`, `js/enemies.js` and `js/tiles.js` draw everything.
+- `js/sheet.js` and `assets/monsters.png` hold the monster sprites by other artists (see below); `js/pixmon.js` holds the hand-drawn bosses and the rest.
 - `js/audio.js` is the synthesizer and soundtrack.
 - `js/i18n.js` switches the language.
 
-The engine and pixel style are shared with [蒼潮魔塔傳 Spire of the Blue Tide](https://ywchen0711.github.io/spire-tide/). The world, characters, story, art and music are all original. There is no build step: open `index.html` through any static web server.
+The engine and pixel style are shared with [蒼潮魔塔傳 Spire of the Blue Tide](https://ywchen0711.github.io/spire-tide/). The world, characters, story and music are original, and so is the art apart from the monster sprites listed in [CREDITS.md](CREDITS.md). There is no build step: open `index.html` through any static web server.
