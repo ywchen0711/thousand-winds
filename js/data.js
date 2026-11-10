@@ -173,7 +173,7 @@ const mon = (name, art, tier, extra = {}) => { const [hp, atk, def, int, agi, , 
 export const ENEMIES = {
   // slimes
   slime1: mon('青凝膠', 'jelly', 1, { hue: 160, hpk: 0.9 }),
-  slime2: mon('毒凝膠', 'jelly', 2, { hue: 260, acts: [['atk', 3], ['spore', 1]] }),
+  slime2: mon('毒凝膠', 'jelly', 2, { hue: 150, acts: [['atk', 3], ['spore', 1]] }),
   slime4: mon('熔岩凝膠', 'redjelly', 4, { acts: [['atk', 2], ['ember', 1]] }),
   slime5: mon('寶石凝膠', 'jelly', 5, { hue: 40, sat: 1.3, hpk: 1.2, resist: 'fire' }),
   // birds

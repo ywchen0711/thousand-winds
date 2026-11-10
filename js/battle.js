@@ -4,7 +4,7 @@
 // learned on the spot. Falling in battle costs LP; with none left a hero is gone for good.
 import { ctx, W, H, canvas, text, textW, windowBox, HAND, HAND_D, tint, bar, ramp, hash, bayer, snes, hex, rgb } from './gfx.js';
 import { sprite } from './sprites.js';
-import { enemyArt } from './enemies.js';
+import { enemyArt, bossArt } from './enemies.js';
 import { ENEMIES, TECHS, SPELLS, ARTS, ITEMS, HEROES, kindName } from './data.js';
 import { L, isEn } from './i18n.js';
 import { S, stats, weaponsOf, grow, addItem, count, afterBattle } from './party.js';
@@ -108,7 +108,7 @@ function foeFighter(f) { const d = ENEMIES[f.id]; return { atk: f.atk, dfn: f.de
 function heroFighter(h, w) { const s = stats(h); const ww = w || weaponsOf(h)[0]; return { atk: weaponAtk(ww, s, h.skills[ww.kind] || 0) * (h.buffs.str ? 1.2 : 1), dfn: s.dfn, int: s.wil, agi: s.agi * (h.buffs.agi ? 1.4 : 1), buffs: h.buffs, defending: h.defending }; }
 const used = (h) => (B.used[h.id] = B.used[h.id] || { kinds: new Set(), schools: new Set(), arts: 0, spells: 0, hit: false });
 function layoutFoes() {
-  const list = B.foes, gap = 8;
+  const list = B.foes, sum = list.reduce((s, f) => s + f.art.width, 0), gap = list.length > 1 ? Math.min(8, Math.floor((W - 4 - sum) / (list.length - 1))) : 0;
   const total = list.reduce((s, f) => s + f.art.width, 0) + gap * (list.length - 1);
   let x = Math.round((W - total) / 2);
   for (const f of list) { f.x = x + f.art.width / 2; f.base = ENEMIES[f.id].boss ? 132 : 122; x += f.art.width + gap; }
@@ -121,10 +121,13 @@ export function startBattle(troop, { bg = 'field', boss = false, music, canFlee 
     const foes = troop.map((id, i) => {
       const d = ENEMIES[id];
       const k = d.boss ? scale : 1;
-      return { id, n: i, name: d.name + (troop.filter((t) => t === id).length > 1 ? 'ABCD'[troop.slice(0, i).filter((t) => t === id).length] : ''), hp: Math.round(d.hp * k), maxhp: Math.round(d.hp * k), atk: Math.round(d.atk * Math.sqrt(k)), def: d.def, int: Math.round(d.int * Math.sqrt(k)), art: enemyArt(d.art, d.hue, d.sat), status: {}, buffs: {}, flash: 0, shake: 0, die: 0, bob: Math.random() * 6 };
+      return { id, n: i, name: d.name + (troop.filter((t) => t === id).length > 1 ? 'ABCD'[troop.slice(0, i).filter((t) => t === id).length] : ''), hp: Math.round(d.hp * k), maxhp: Math.round(d.hp * k), atk: Math.round(d.atk * Math.sqrt(k)), def: d.def, int: Math.round(d.int * Math.sqrt(k)), art: d.boss ? bossArt(d.art, d.hue, d.sat) : enemyArt(d.art, d.hue, d.sat), status: {}, buffs: {}, flash: 0, shake: 0, die: 0, bob: Math.random() * 6 };
     });
     B = { troop, foes, bg, boss, canFlee: canFlee && !boss, waits: [], pops: [], parts: [], msg: '', round: 0, active: null, shake: 0, flash: 0, flashCol: '#fff', fade: 30, resolve, heroFx: {}, bolt: null, done: false, used: {}, bulbs: [], tier: Math.max(...troop.map((id) => ENEMIES[id].tier + (ENEMIES[id].boss ? 1 : 0))) };
     for (const h of S.members) { h.buffs = {}; h.defending = false; h.status = { ...h.status }; delete h.status.sleep; delete h.status.stun; }
+    // hand-drawn monsters are shown at double size whenever the whole group still fits on screen
+    const big = foes.map((f) => (ENEMIES[f.id].boss ? f.art : bossArt(ENEMIES[f.id].art, ENEMIES[f.id].hue, ENEMIES[f.id].sat)));
+    if (big.reduce((s, a) => s + a.width, 0) <= W + 30 && Math.max(...big.map((a) => a.height)) <= 110) foes.forEach((f, i) => { f.art = big[i]; });
     layoutFoes();
     playMusic(music || (boss ? 'boss' : 'battle'), { restart: true });
     run();

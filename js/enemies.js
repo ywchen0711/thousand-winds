@@ -1,6 +1,7 @@
 // Battle art for every monster, painted from lit blobs, plus small field sprites for the ones
 // that walk around in dungeons.
 import { Painter, ramp, canvas } from './gfx.js';
+import { hasPix, pixArt, pixMini } from './pixmon.js';
 
 const K = '#100818', WHITE = '#ffffff';
 const eye = (p, x, y, col = K, glint = true, h = 2) => { for (let i = 0; i < h; i++) p.px(x, y + i, col); if (glint) p.px(x, y, WHITE); };
@@ -394,12 +395,24 @@ function recolor(src, hue = 0, sat = 1) {
 }
 export function enemyArt(key, hue = 0, sat = 1) {
   const k = key + '|' + hue + '|' + sat;
-  if (!cache.has(k)) cache.set(k, hue || sat !== 1 ? recolor(enemyArt(key), hue, sat) : ART[key]());
+  // hand-drawn art first; the painted shapes are only a fallback
+  if (!cache.has(k)) cache.set(k, hue || sat !== 1 ? recolor(enemyArt(key), hue, sat) : hasPix(key) ? pixArt(key) : ART[key]());
   return cache.get(k);
 }
 export function miniArt(key, hue = 0, sat = 1) {
   const k = 'mini:' + key + '|' + hue + '|' + sat;
-  if (!cache.has(k)) cache.set(k, hue || sat !== 1 ? recolor(miniArt(key), hue, sat) : MINI[key] ? MINI[key]() : enemyArt(key));
+  if (!cache.has(k)) cache.set(k, hue || sat !== 1 ? recolor(miniArt(key), hue, sat) : hasPix(key) ? pixMini(key) : MINI[key] ? MINI[key]() : enemyArt(key));
+  return cache.get(k);
+}
+// bosses are drawn twice as large in battle, every pixel doubled
+export function bossArt(key, hue = 0, sat = 1) {
+  const k = 'boss:' + key + '|' + hue + '|' + sat;
+  if (!cache.has(k)) {
+    const a = enemyArt(key, hue, sat);
+    if (!hasPix(key)) { cache.set(k, a); return a; }
+    const c = canvas(a.width * 2, a.height * 2); c.x.imageSmoothingEnabled = false; c.x.drawImage(a, 0, 0, c.width, c.height);
+    cache.set(k, c);
+  }
   return cache.get(k);
 }
 export const ART_KEYS = Object.keys(ART);
