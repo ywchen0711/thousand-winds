@@ -1,10 +1,11 @@
 // The field menu (items, techniques, magic, equipment, status, order, save, settings), the shops,
 // the spell shops where heroes learn magic, and the tavern where companions can wait for you.
-import { ctx, W, H, text, textW, windowBox } from './gfx.js';
+import { ctx, W, H, text, textW, windowBox, HAND_D } from './gfx.js';
 import { sprite } from './sprites.js';
 import { ITEMS, SPELLS, ARTS, HEROES, WEAPONS, SCHOOLS, KIND_NAMES } from './data.js';
 import { S, stats, addItem, count, save, weaponsOf } from './party.js';
-import { menu, panel, notice, ask, pressKey } from './ui.js';
+import { menu, panel, notice, ask, pressKey, widget, wrap, fit } from './ui.js';
+import { input } from './input.js';
 import { sfx, vol, setVolumes, music, setMusic } from './audio.js';
 import { healAmount, spellPow } from './rules.js';
 import { L, LANG, isEn, setLang } from './i18n.js';
@@ -15,6 +16,10 @@ const fmtTime = (t) => { const s = Math.floor(t / 60), h = Math.floor(s / 3600),
 const kname = (k) => L(KIND_NAMES[k][0], KIND_NAMES[k][1]);
 const SLOTS = () => [['weapon', L('武器一', 'Weapon 1')], ['weapon2', L('武器二', 'Weapon 2')], ['armor', L('防具', 'Armour')], ['acc', L('飾品', 'Accessory')]];
 
+// while a member is being chosen the party panel itself is the picker: { i, ok }
+let pick = null;
+// sub-screens that cover the whole top of the screen hide the party/gold panels behind them
+let base = true;
 function drawParty(x, y, w, sel = -1) {
   windowBox(x, y, w, 8 + S.members.length * 40);
   S.members.forEach((m, i) => {
@@ -25,16 +30,39 @@ function drawParty(x, y, w, sel = -1) {
     text(`LP ${m.lp}/${s.maxlp}`, x + w - 8, yy, m.lp <= 2 ? '#f86060' : '#f878a8', { align: 'right' });
     text(`HP ${m.hp}/${s.maxhp}`, x + 30, yy + 13, m.hp < s.maxhp / 4 ? '#f8e070' : '#f8f8f8');
     text(`WP ${m.wp}  JP ${m.jp}`, x + 30, yy + 25, '#c0d0f8');
+    if (pick && !pick.ok(m)) { ctx.fillStyle = 'rgba(8,8,40,0.55)'; ctx.fillRect(x + 4, yy - 2, w - 8, 38); }
   });
 }
-async function pickMember(title, filter = () => true) {
-  const r = await menu(S.members.map((m) => ({ label: m.name, right: `LP ${m.lp}`, disabled: !filter(m) })), { x: 96, y: 40, w: 150, title });
+// choose a member right on the party panel, so no extra window covers their LP and HP;
+// the panel is drawn here too, so this also works in the shops (ty moves the title below a gold window)
+async function pickMember(title, filter = () => true, ty = 4) {
+  const keep = base; base = true;
+  let t = 0;
+  pick = { i: Math.max(0, S.members.findIndex(filter)), ok: filter };
+  const r = await widget({
+    update() {
+      const n = S.members.length;
+      t++;
+      if (input.repeat('down')) { pick.i = (pick.i + 1) % n; sfx('cursor'); }
+      if (input.repeat('up')) { pick.i = (pick.i + n - 1) % n; sfx('cursor'); }
+      if (input.pressed('a')) { if (!filter(S.members[pick.i])) { sfx('buzz'); return; } sfx('ok'); this.done(pick.i); } else if (input.pressed('b')) { sfx('cancel'); this.done(-1); }
+    },
+    draw() {
+      drawParty(4, 4, 150, pick.i);
+      // the title stays right of the party panel; a long one wraps onto a second line
+      const tl = wrap(title, 76);
+      windowBox(158, ty, 94, 12 + tl.length * 14); tl.forEach((l, k) => text(l, 167, ty + 6 + k * 14, '#f8e070'));
+      ctx.drawImage(HAND_D, 15, 4 + pick.i * 40 + ((t >> 3) % 2));
+    },
+  });
+  pick = null; base = keep;
   return r < 0 ? null : S.members[r];
 }
 
 // ---------- field menu ----------
 export async function fieldMenu(ctxInfo) {
   const close = panel(() => {
+    if (!base) return;
     drawParty(4, 4, 150, -1);
     windowBox(158, 168, 94, 52);
     text(`${S.gold} G`, 244, 174, '#f8e070', { align: 'right' });
@@ -73,9 +101,10 @@ async function itemMenu() {
     const list = Object.keys(S.inv).sort((a, b) => (ITEMS[a].key ? 2 : ITEMS[a].slot ? 1 : 0) - (ITEMS[b].key ? 2 : ITEMS[b].slot ? 1 : 0));
     if (!list.length) { await notice(L('什麼都沒有。', 'Nothing here.')); return; }
     let desc = '';
-    const close = panel(() => { windowBox(4, 186, W - 8, 34); text(desc, 14, 196); });
+    base = false;
+    const close = panel(() => { windowBox(4, 182, W - 8, 38); wrap(desc, W - 28).slice(0, 2).forEach((l, i) => text(l, 14, (l === desc ? 194 : 187) + i * 15)); });
     const r = await menu(list.map((id) => ({ label: ITEMS[id].name, right: ITEMS[id].key ? '' : S.inv[id], color: ITEMS[id].stone ? '#a0f8d0' : undefined })), { x: 4, y: 4, w: W - 8, cols: 2, maxRows: 10, onMove: (i) => { desc = itemDesc(ITEMS[list[i]]); } });
-    close();
+    close(); base = true;
     if (r < 0) return;
     const id = list[r], it = ITEMS[id];
     if (!it.use || it.use === 'escape') { sfx('buzz'); continue; }
@@ -121,12 +150,17 @@ async function magicMenu() {
 async function equipMenu() {
   const m = await pickMember(L('誰要換裝備？', 'Equip whom?'));
   if (!m) return;
+  base = false;
+  try { await equipScreen(m); } finally { base = true; }
+}
+async function equipScreen(m) {
   for (;;) {
     const close = panel(() => {
       const st = stats(m), ws = weaponsOf(m);
-      windowBox(4, 132, W - 8, 52);
-      text(`${L('防禦', 'DEF')} ${st.dfn}   ${L('力', 'STR')} ${st.str}  ${L('體', 'VIT')} ${st.vit}  ${L('速', 'AGI')} ${st.agi}  ${L('意', 'WIL')} ${st.wil}`, 14, 140, '#c0d0f8');
-      text(ws.map((w) => `${w.id ? ITEMS[w.id].name : L('空手', 'Fists')} ${kname(w.kind)}Lv${m.skills[w.kind] || 0}`).join('  '), 14, 158);
+      windowBox(4, 126, W - 8, 58);
+      text(`${L('防禦', 'DEF')} ${st.dfn}   ${L('力', 'STR')} ${st.str}  ${L('體', 'VIT')} ${st.vit}  ${L('速', 'AGI')} ${st.agi}  ${L('意', 'WIL')} ${st.wil}`, 14, 133, '#c0d0f8');
+      // one weapon per line: the name, then its skill on the right
+      ws.forEach((w, i) => { text(fit(w.id ? ITEMS[w.id].name : L('空手', 'Fists'), 150), 14, 148 + i * 14); text(`${kname(w.kind)} Lv${m.skills[w.kind] || 0}`, W - 14, 148 + i * 14, '#c0d0f8', { align: 'right' }); });
     });
     const r = await menu(SLOTS().map(([k, n]) => ({ label: n, right: m.equip[k] ? ITEMS[m.equip[k]].name : '──' })), { x: 4, y: 28, w: 220, title: L(`${m.name}的裝備`, `${m.name}'s equipment`) });
     close();
@@ -135,7 +169,7 @@ async function equipMenu() {
     const opts = Object.keys(S.inv).filter((id) => ITEMS[id].slot === want);
     const labels = [{ label: L('（卸下）', '(Remove)') }, ...opts.map((id) => ({ label: ITEMS[id].name, right: S.inv[id] }))];
     let info = '';
-    const close2 = panel(() => { windowBox(4, 186, W - 8, 34); text(info, 14, 196); });
+    const close2 = panel(() => { if (info) { windowBox(4, 186, W - 8, 34); text(fit(info, W - 28), 14, 196); } });
     const k = await menu(labels, { x: 40, y: 28, w: 196, title: SLOTS()[r][1], maxRows: 8, onMove: (i) => { info = i === 0 ? '' : itemDesc(ITEMS[opts[i - 1]]); } });
     close2();
     if (k < 0) continue;
@@ -162,8 +196,8 @@ export async function statusMenu() {
     ks.forEach((k, i) => { const x = 14 + (i % 4) * 58, y = 98 + Math.floor(i / 4) * 15, lv = m.skills[k] || 0; text(isEn() && k === 'great' ? 'Great' : kname(k), x, y, lv ? '#f8f8f8' : '#6870a0'); text(String(lv), x + 52, y, lv ? '#f8e070' : '#6870a0', { align: 'right' }); });
     text(L(`技能 ${m.arts.length} 種　魔法 ${m.spells.length} 種`, `${m.arts.length} arts   ${m.spells.length} spells`), 14, 164, '#a0c0f8');
     const sp = m.spells.map((s) => SPELLS[s].name).join(L('、', ', '));
-    text(sp.length > (isEn() ? 38 : 18) ? sp.slice(0, isEn() ? 36 : 17) + '…' : sp, 14, 180);
-    text(L(`裝備：${['weapon', 'weapon2'].map((k) => (m.equip[k] ? ITEMS[m.equip[k]].name : '──')).join(' / ')}`, `Arms: ${['weapon', 'weapon2'].map((k) => (m.equip[k] ? ITEMS[m.equip[k]].name : '--')).join(' / ')}`), 14, 198);
+    text(fit(sp, W - 28), 14, 180);
+    text(fit(L(`裝備：${['weapon', 'weapon2'].map((k) => (m.equip[k] ? ITEMS[m.equip[k]].name : '──')).join(' / ')}`, `Arms: ${['weapon', 'weapon2'].map((k) => (m.equip[k] ? ITEMS[m.equip[k]].name : '--')).join(' / ')}`), W - 28), 14, 198);
   });
   await pressKey();
   close();
@@ -247,7 +281,7 @@ export async function spellShop(stock, greeting = L('想學什麼魔法呢？', 
     if (r < 0) break;
     const id = stock[r], sp = SPELLS[id];
     if (sp.price > S.gold) { sfx('buzz'); continue; }
-    const m = await pickMember(L('教給誰？', 'Teach whom?'), (x) => !x.spells.includes(id));
+    const m = await pickMember(L('教給誰？', 'Teach whom?'), (x) => !x.spells.includes(id), 32);
     if (!m) continue;
     S.gold -= sp.price; m.spells.push(id); if (!m.skills[sp.school]) m.skills[sp.school] = 1;
     sfx('level');

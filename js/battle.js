@@ -12,7 +12,7 @@ import { S, stats, weaponsOf, grow, addItem, count, afterBattle } from './party.
 import { physical, magic, healAmount, foeAction, weaponAtk, spellPow, glimmerChance } from './rules.js';
 import { input } from './input.js';
 import { sfx, playMusic } from './audio.js';
-import { UI, menu, uiTick, wrap } from './ui.js';
+import { UI, menu, uiTick, wrap, fit } from './ui.js';
 
 let B = null;
 export const isBattle = () => !!B;
@@ -317,7 +317,7 @@ function pickFoe() {
         if (input.pressed('a')) { sfx('ok'); done(list[i]); }
         if (input.pressed('b')) { sfx('cancel'); done(null); }
       },
-      draw() { const f = list[i]; if (!f) return; ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(f.base - f.ah - 10 + ((B.t >> 3) % 2))); windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); drawTags(statusTags(f), W - 12, 10, W / 2 - 20 - textW(f.name) / 2); },
+      draw() { const f = list[i]; if (!f) return; windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); drawTags(statusTags(f), W - 12, 10, W / 2 - 20 - textW(f.name) / 2); ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(Math.max(31, f.base - f.ah - 10) + ((B.t >> 3) % 2))); },
     };
     const done = (v) => { UI_pop(w); res(v); };
     UI_push(w);
@@ -662,6 +662,8 @@ function drawTags(tags, x, y, room) {
 }
 // a name with its tags beside it; in a window too narrow for both, the name and each tag take turns
 function nameTags(name, col, tags, x0, x1, y) {
+  // a name wider than its box keeps its last word ("Old Gears" -> "Gears"), else it is cut with "..."
+  if (textW(name) > x1 - x0) { const last = name.split(' ').pop(); name = last !== name && textW(last) <= x1 - x0 ? last : fit(name, x1 - x0); }
   const room = x1 - x0 - textW(name) - 3;
   if (!tags.length || Math.max(...tags.map((t) => textW(t[0]))) <= room) { text(name, x0, y, col); drawTags(tags, x1, y, room); return; }
   const k = Math.floor(B.t / 60);
@@ -717,8 +719,8 @@ export function drawBattle() {
     const oy = fx.hit ? ((fx.hit % 4) < 2 ? 1 : -1) : 0;
     windowBox(b.x, b.y + oy, b.w, b.h);
     const dead = h.hp <= 0, low = h.hp < s.maxhp / 4;
-    nameTags(h.name, B.active === h ? '#f8e070' : dead ? '#f86060' : '#f8f8f8', statusTags(h), b.x + 5, b.x + b.w - 8 - textW(String(h.lp)), b.y + 3 + oy);
-    text(String(h.lp), b.x + b.w - 5, b.y + 3 + oy, h.lp <= 2 ? '#f86060' : '#f878a8', { align: 'right' });
+    nameTags(h.name, B.active === h ? '#f8e070' : dead ? '#f86060' : '#f8f8f8', statusTags(h), b.x + 4, b.x + b.w - 5 - textW(String(h.lp)), b.y + 3 + oy);
+    text(String(h.lp), b.x + b.w - 4, b.y + 3 + oy, h.lp <= 2 ? '#f86060' : '#f878a8', { align: 'right' });
     text(String(h.hp), b.x + b.w - 5, b.y + 16 + oy, dead ? '#f86060' : low ? '#f8e070' : '#f8f8f8', { align: 'right' });
     text('HP', b.x + 5, b.y + 16 + oy, h.status.poison ? '#c080f8' : '#a0c0f8');
     text('WP', b.x + 5, b.y + 29 + oy, '#a0c0f8'); text(String(h.wp), b.x + b.w - 5, b.y + 29 + oy, '#f8f8f8', { align: 'right' });
