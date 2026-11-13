@@ -317,7 +317,7 @@ function pickFoe() {
         if (input.pressed('a')) { sfx('ok'); done(list[i]); }
         if (input.pressed('b')) { sfx('cancel'); done(null); }
       },
-      draw() { const f = list[i]; if (!f) return; ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(f.base - f.ah - 10 + ((B.t >> 3) % 2))); windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); },
+      draw() { const f = list[i]; if (!f) return; ctx.drawImage(HAND_D, Math.round(f.x - 5), Math.round(f.base - f.ah - 10 + ((B.t >> 3) % 2))); windowBox(4, 4, W - 8, 24); text(f.name, W / 2, 10, '#f8f8f8', { align: 'center' }); drawTags(statusTags(f), W - 12, 10, W / 2 - 20 - textW(f.name) / 2); },
     };
     const done = (v) => { UI_pop(w); res(v); };
     UI_push(w);
@@ -640,6 +640,33 @@ function dissolved(f) {
   void dissolve;
   return c;
 }
+// every active status as a short coloured tag, so the windows show at a glance who is poisoned, asleep or buffed
+export function statusTags(f) {
+  const t = [], st = f.status || {}, bf = f.buffs || {};
+  if (st.poison) t.push([L('毒', 'PSN'), '#c080f8']);
+  if (st.sleep) t.push([L('眠', 'SLP'), '#c0c0ff']);
+  if (st.stun) t.push([L('定', 'STN'), '#f8e070']);
+  if (bf.str > 0) t.push([L('攻↑', 'ATK↑'), '#f8a050']);
+  if (bf.def > 0) t.push([L('防↑', 'DEF↑'), '#80d8ff']);
+  if (bf.agi > 0) t.push([L('速↑', 'SPD↑'), '#80f8a0']);
+  if (bf.int > 0) t.push([L('魔↑', 'MAG↑'), '#f080f8']);
+  return t;
+}
+// right-aligned at x: all of them when they fit in room, otherwise one at a time, changing every second
+function drawTags(tags, x, y, room) {
+  if (!tags.length) return;
+  const all = tags.map((t) => t[0]).join(' ');
+  if (textW(all) <= room) { for (let i = tags.length - 1; i >= 0; i--) { text(tags[i][0], x, y, tags[i][1], { align: 'right' }); x -= textW(tags[i][0] + ' '); } return; }
+  const [s, col] = tags[Math.floor(B.t / 60) % tags.length];
+  text(s, x, y, col, { align: 'right' });
+}
+// a name with its tags beside it; in a window too narrow for both, the name and each tag take turns
+function nameTags(name, col, tags, x0, x1, y) {
+  const room = x1 - x0 - textW(name) - 3;
+  if (!tags.length || Math.max(...tags.map((t) => textW(t[0]))) <= room) { text(name, x0, y, col); drawTags(tags, x1, y, room); return; }
+  const k = Math.floor(B.t / 60);
+  if (k % 2 === 0) text(name, x0, y, col); else { const [s, c] = tags[(k >> 1) % tags.length]; text(s, x0, y, c); }
+}
 export function drawBattle() {
   if (!B) return;
   const sx = B.shake ? ((B.shake % 2) * 2 - 1) * Math.min(4, B.shake) : 0;
@@ -690,7 +717,7 @@ export function drawBattle() {
     const oy = fx.hit ? ((fx.hit % 4) < 2 ? 1 : -1) : 0;
     windowBox(b.x, b.y + oy, b.w, b.h);
     const dead = h.hp <= 0, low = h.hp < s.maxhp / 4;
-    text(h.name, b.x + 5, b.y + 3 + oy, B.active === h ? '#f8e070' : dead ? '#f86060' : '#f8f8f8');
+    nameTags(h.name, B.active === h ? '#f8e070' : dead ? '#f86060' : '#f8f8f8', statusTags(h), b.x + 5, b.x + b.w - 8 - textW(String(h.lp)), b.y + 3 + oy);
     text(String(h.lp), b.x + b.w - 5, b.y + 3 + oy, h.lp <= 2 ? '#f86060' : '#f878a8', { align: 'right' });
     text(String(h.hp), b.x + b.w - 5, b.y + 16 + oy, dead ? '#f86060' : low ? '#f8e070' : '#f8f8f8', { align: 'right' });
     text('HP', b.x + 5, b.y + 16 + oy, h.status.poison ? '#c080f8' : '#a0c0f8');
